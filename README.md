@@ -20,8 +20,7 @@ python preprocess.py --srcfile data/src-train.txt --targetfile data/targ-train.t
 ```
 python train.py -data_file data/demo-train.hdf5 -val_data_file data/demo-val.hdf5 -savefile demo-model
 ```
-
-
+support one-hot input with the flag `-one_hot`
 ### Evaluating
 
 ```
