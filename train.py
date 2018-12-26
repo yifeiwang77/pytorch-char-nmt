@@ -22,7 +22,7 @@ from utils import data_iter
 from tensorboardX import SummaryWriter
 
 # Arguments parser
-parser = argparse.ArgumentParser(description="Deep NLP Models for Text Classification")
+parser = argparse.ArgumentParser(description="Deep Char-NMT")
 parser.add_argument('-data_file', type=str, default='data/demo-train.hdf5')
 parser.add_argument('-val_data_file', type=str, default='data/demo-val.hdf5')
 parser.add_argument('-savefile', default='models/model', type=str, help='save trained model to')
@@ -40,7 +40,7 @@ parser.add_argument('-dropout', type=float, default=0)
 
 ## optimization
 parser.add_argument('-epochs', type=int, default=13)
-parser.add_argument('-optim', type=str, default='SGD', choices=['SGD', 'Adam'], help='mutiple gpus')
+parser.add_argument('-optim', type=str, default='SGD', choices=['SGD', 'Adam'], help='optimizers')
 parser.add_argument('-lr', type=float, default=1)
 parser.add_argument('-max_grad_norm', type=float, default=5)
 parser.add_argument('-lr_decay', type=float, default=.5)
@@ -91,7 +91,7 @@ model.to(device)
 if args.optim == 'SGD':
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
 elif args.optim == 'Adam':
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 else:
     raise ValueError('Not support')
 
