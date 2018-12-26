@@ -1,0 +1,5 @@
+*.pyc
+*.hdf5
+*bin
+*json
+*dict
