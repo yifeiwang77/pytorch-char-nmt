@@ -10,7 +10,7 @@ TODO:
 2. evaluation of BLEU score
 
 ### Usage
-#### Preprocessing
+#### Preprocessing (with py27 for now)
 ```
 python preprocess.py --srcfile data/src-train.txt --targetfile data/targ-train.txt --srcvalfile data/src-val.txt --targetvalfile data/targ-val.txt --outputfile data/demo --chars 1
 ```
