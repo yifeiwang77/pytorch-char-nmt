@@ -24,6 +24,7 @@ python train.py -data_file data/demo-train.hdf5 -val_data_file data/demo-val.hdf
 
 use `inputs` flag to specify input type: `word`, `char` (default), or `one_hot_char`. Also need to be provided in evaluation.
 
+
 ### Evaluating
 
 ```
