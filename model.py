@@ -88,24 +88,28 @@ class Highway(nn.Module):
 
 class CharLSTM(nn.Module):
 
-    def __init__(self,  args, char_size, target_size, device, input_feed=True, pad_id=0):
+    def __init__(self, args, src_word_size=None, src_char_size=None, target_size=None,
+                input_feed=True, pad_id=0):
         super(CharLSTM, self).__init__()
 
         self.embed_size = args.embed_size
         self.hidden_size = args.hidden_size
         self.dropout_rate = args.dropout
         self.input_feed = input_feed
-        self.device = device
         self.pad_id = pad_id
-        self.one_hot = args.one_hot
 
         # initialize neural network layers...
+        if args.inputs in ['char', 'one_hot_char']:
+            self.src_embed = CharCNNEmbedder(src_char_size, args.char_vec_size, args.kernel_width, args.num_kernels, 
+                args.num_highway_layers, one_hot=(args.inputs=='one_hot_char'))
+            self.encoder_lstm = nn.LSTM(args.num_kernels, self.hidden_size, bidirectional=True)
+        elif args.inputs == 'word':
+            self.src_embed = nn.Embedding(src_word_size, self.embed_size, padding_idx=pad_id)
+            self.encoder_lstm = nn.LSTM(self.embed_size, self.hidden_size, bidirectional=True)
+        else:
+            raise ValueError(' '.join(['input type', args.input, 'not support']))
 
-        self.src_embed = CharCNNEmbedder(char_size, args.char_vec_size, args.kernel_width, args.num_kernels, 
-            args.num_highway_layers, args.one_hot)
         self.tgt_embed = nn.Embedding(target_size, self.embed_size, padding_idx=pad_id)
-
-        self.encoder_lstm = nn.LSTM(args.num_kernels, self.hidden_size, bidirectional=True)
         decoder_lstm_input = self.embed_size + self.hidden_size if self.input_feed else self.embed_size
         self.decoder_lstm = nn.LSTMCell(decoder_lstm_input, self.hidden_size)
 
@@ -125,6 +129,10 @@ class CharLSTM(nn.Module):
 
         # initialize the decoder's state and cells with encoder hidden states
         self.decoder_cell_init = nn.Linear(self.hidden_size * 2, self.hidden_size)
+
+    @property
+    def device(self):
+        return self.tgt_embed.weight.device
 
     def forward(self, src_sents_var, tgt_sents_var, src_sents_len):
         """

@@ -1,7 +1,8 @@
 
 ## A Character-level Neural Machine Translation Model in PyTorch
 ---
-A PyTorch Implementation of the paper Character-based Neural Machine Translation by Costa-jussa and Fonollosa.
+A PyTorch Implementation of the paper Character-based Neural Machine Translation by Costa-jussa and Fonollosa. 
+Word-level seq2seq-attn (Luong et al. 2015) is also supported.
 
 *Specifically, we implement the char model of Yoon Kim's https://github.com/harvardnlp/seq2seq-attn with PyTorch. We try to keep similar usages, hyperparameters and preprocessing, not they are the same.*
 
@@ -14,13 +15,14 @@ TODO:
 ```
 python preprocess.py --srcfile data/src-train.txt --targetfile data/targ-train.txt --srcvalfile data/src-val.txt --targetvalfile data/targ-val.txt --outputfile data/demo --chars 1
 ```
-
+use `chars` flag to generate char-level data
 ### Training
 
 ```
 python train.py -data_file data/demo-train.hdf5 -val_data_file data/demo-val.hdf5 -savefile demo-model
 ```
 
+use `inputs` flag to specify input type: `word`, `char` (default), or `one_hot_char`. Also need to be provided in evaluation.
 
 ### Evaluating
 

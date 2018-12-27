@@ -29,10 +29,10 @@ parser.add_argument('-savefile', default='models/model', type=str, help='save tr
 parser.add_argument('-train_from', type=str, default=None)
 
 # model
-parser.add_argument('-one_hot', action='store_true', default=False)
+parser.add_argument('-inputs', type=str, default='char', choices=['char', 'word', 'one_hot_char'])
 parser.add_argument('-char_vec_size', type=int, default=25)
 parser.add_argument('-kernel_width', type=int, default=6)
-parser.add_argument('-num_kernels', type=int, default=1000)
+parser.add_argument('-num_kernels', type=int, default=1000, help='input word embedding dim')
 parser.add_argument('-num_highway_layers', type=int, default=2)
 parser.add_argument('-embed_size', type=int, default=512)
 parser.add_argument('-hidden_size', type=int, default=512)
@@ -70,8 +70,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # load_data
 train_data = h5py.File(args.data_file, 'r')
 valid_data = h5py.File(args.val_data_file, 'r')
-char_size = train_data['char_size'][()].item()
-target_size = train_data['target_size'][()].item()
 
 train_batch_l = train_data['batch_l'][()]
 valid_batch_l = valid_data['batch_l'][()]
@@ -83,7 +81,14 @@ if args.valid_niter is None:
     args.valid_niter = len(train_batch_l)
 
 #build model
-model = CharLSTM(args, char_size, target_size, device)
+target_size = train_data['target_size'][()].item()
+if args.inputs in ['char', 'one_hot_char']:
+    char_size = train_data['char_size'][()].item()
+    model = CharLSTM(args, src_char_size=char_size, target_size=target_size)
+elif args.inputs == 'word':
+    src_size = train_data['source_size'][()].item()
+    model = CharLSTM(args, src_word_size=src_size, target_size=target_size)
+
 if args.mgpu:
     print("Let's use", torch.cuda.device_count(), "GPUs!")
     model = nn.DataParallel(model)
@@ -91,27 +96,9 @@ model.to(device)
 if args.optim == 'SGD':
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
 elif args.optim == 'Adam':
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 else:
     raise ValueError('Not support')
-
-def evaluate_loss(model, data, device, args):
-    cum_loss = 0.
-    cum_tgt_words = 0.
-    cum_examples = 0.
-    with torch.no_grad():
-        for src_sents_var, tgt_sents_var, src_words, pred_tgt_word_num in data_iter(data, device, args.one_hot):
-            batch_size = src_sents_var.size(1)
-
-            # (tgt_sent_len, batch_size, tgt_vocab_size)
-            word_loss = model(src_sents_var, tgt_sents_var, src_words)
-
-            cum_loss += word_loss.item()
-            cum_tgt_words += pred_tgt_word_num
-            cum_examples += batch_size
-    loss = cum_loss / cum_examples
-    ppl = np.exp(cum_loss/cum_tgt_words)
-    return loss, ppl
 
 # init loggers
 train_iter = patience = cum_loss = report_loss = cum_tgt_words = report_tgt_words = 0
@@ -121,7 +108,7 @@ train_time = begin_time = time.time()
 print('begin Maximum Likelihood training')
 
 for epoch in range(args.epochs):
-    for src_sents_var, tgt_sents_var, src_words, pred_tgt_word_num in data_iter(train_data, device, one_hot=args.one_hot):
+    for src_sents_var, tgt_sents_var, src_words, pred_tgt_word_num in data_iter(train_data, device, inputs=args.inputs):
         train_iter += 1
 
         batch_size = src_sents_var.size(1)
@@ -220,3 +207,39 @@ for epoch in range(args.epochs):
                     exit(0)
 
 
+
+def evaluate_loss(model, data, device, args):
+    cum_loss = 0.
+    cum_tgt_words = 0.
+    cum_examples = 0.
+    with torch.no_grad():
+        for src_sents_var, tgt_sents_var, src_words, pred_tgt_word_num in data_iter(data, device, inputs=args.inputs):
+            batch_size = src_sents_var.size(1)
+
+            # (tgt_sent_len, batch_size, tgt_vocab_size)
+            word_loss = model(src_sents_var, tgt_sents_var, src_words)
+
+            cum_loss += word_loss.item()
+            cum_tgt_words += pred_tgt_word_num
+            cum_examples += batch_size
+    loss = cum_loss / cum_examples
+    ppl = np.exp(cum_loss/cum_tgt_words)
+    return loss, ppl
+
+# def evaluate_bleu(model, data, device, args, batch_num=float('inf')):
+#     cum_loss = 0.
+#     cum_tgt_words = 0.
+#     cum_examples = 0.
+#     with torch.no_grad():
+#         for src_sents_var, tgt_sents_var, src_words, pred_tgt_word_num in data_iter(data, device, args.one_hot):
+#             batch_size = src_sents_var.size(1)
+
+#             # (tgt_sent_len, batch_size, tgt_vocab_size)
+#             word_loss = model(src_sents_var, tgt_sents_var, src_words)
+
+#             cum_loss += word_loss.item()
+#             cum_tgt_words += pred_tgt_word_num
+#             cum_examples += batch_size
+#     loss = cum_loss / cum_examples
+#     ppl = np.exp(cum_loss/cum_tgt_words)
+#     return loss, ppl
