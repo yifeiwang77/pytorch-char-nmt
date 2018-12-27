@@ -107,6 +107,24 @@ hist_valid_scores = []
 train_time = begin_time = time.time()
 print('begin Maximum Likelihood training')
 
+def evaluate_loss(model, data, device, args):
+    cum_loss = 0.
+    cum_tgt_words = 0.
+    cum_examples = 0.
+    with torch.no_grad():
+        for src_sents_var, tgt_sents_var, src_words, pred_tgt_word_num in data_iter(data, device, inputs=args.inputs):
+            batch_size = src_sents_var.size(1)
+
+            # (tgt_sent_len, batch_size, tgt_vocab_size)
+            word_loss = model(src_sents_var, tgt_sents_var, src_words)
+
+            cum_loss += word_loss.item()
+            cum_tgt_words += pred_tgt_word_num
+            cum_examples += batch_size
+    loss = cum_loss / cum_examples
+    ppl = np.exp(cum_loss/cum_tgt_words)
+    return loss, ppl
+
 for epoch in range(args.epochs):
     for src_sents_var, tgt_sents_var, src_words, pred_tgt_word_num in data_iter(train_data, device, inputs=args.inputs):
         train_iter += 1
@@ -207,24 +225,6 @@ for epoch in range(args.epochs):
                     exit(0)
 
 
-
-def evaluate_loss(model, data, device, args):
-    cum_loss = 0.
-    cum_tgt_words = 0.
-    cum_examples = 0.
-    with torch.no_grad():
-        for src_sents_var, tgt_sents_var, src_words, pred_tgt_word_num in data_iter(data, device, inputs=args.inputs):
-            batch_size = src_sents_var.size(1)
-
-            # (tgt_sent_len, batch_size, tgt_vocab_size)
-            word_loss = model(src_sents_var, tgt_sents_var, src_words)
-
-            cum_loss += word_loss.item()
-            cum_tgt_words += pred_tgt_word_num
-            cum_examples += batch_size
-    loss = cum_loss / cum_examples
-    ppl = np.exp(cum_loss/cum_tgt_words)
-    return loss, ppl
 
 # def evaluate_bleu(model, data, device, args, batch_num=float('inf')):
 #     cum_loss = 0.
